@@ -14,8 +14,11 @@ import threading
 import os
 import sys
 
+
+dirPath = os.path.dirname(os.path.dirname(__file__))
+
 def program():
-    userThread = threading.Thread(target = runpy.run_path, args = [os.path.join("src","test.py")])
+    userThread = threading.Thread(target = runpy.run_path, args = [os.path.join(dirPath,"src","test.py")])
     userThread.start()
 
 
@@ -35,10 +38,12 @@ root.style = Style()
 root.style.configure("TButton", padding = (0,3,0,3),
                      font = ('Default',10))
 root.style.configure("TLabel", font = ('Default', 10))
-root.iconbitmap(default=os.path.join("images","jesicon.ico"))
+try:
+    root.iconbitmap(default=os.path.join(dirPath,"images","jesicon.ico"))
+except:
+    root.iconbitmap(default=os.path.join("images","jesicon.ico"))
 
 
 mymedia.setRoot(root)
 root.after(0, program)
 root.mainloop()
-os._exit(0)

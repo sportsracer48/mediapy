@@ -111,9 +111,10 @@ italic = "italic"
 bold = "bold"
 plain = "plain"
 
-mono = "monospace"
-serif = "serif"
-sansSerif = "sans-serif"
+dirPath = os.path.dirname(__file__)
+mono = os.path.join(dirPath,"..","monospace")
+serif = os.path.join(dirPath,"..","serif")
+sansSerif = os.path.join(dirPath,"..","sans-serif")
 
 #Name nine types of public domain fonts I found on the internet
 fontTable = {mono:{italic:os.path.join(mono,"Hack-Oblique.ttf"),

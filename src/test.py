@@ -15,3 +15,8 @@ path4 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sound
 path5 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sounds\\Blip.wav'
 path6 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sounds\\g722.aifc' #shouldn't work, aifc not supported
 path7 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sounds\\acidisneeded.aif'
+
+
+image = makeEmptyPicture(600, 600)
+addText(image, 100, 100, "It worked")
+show(image)
