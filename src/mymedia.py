@@ -142,8 +142,7 @@ mediaFolder = user.home + os.sep
 # print "Updated by Nadeem Abdul Hamid, June 14 2007"
 # print "Updated by Henry Rachootin July 14 2015"
 
-
-def onQuit():
+def quitTk():
     global tkRunning
     tkRunning = False
 
@@ -174,8 +173,6 @@ def _settupRoot_tk(condition):
         condition.release()
     root.after(0,notifyCondition)
     
-    root.protocol("WM_DELETE_WINDOW", onQuit)
-    
     tkRunning = True
     
     while(tkRunning):
@@ -187,6 +184,10 @@ def _settupRoot_tk(condition):
             pass #this is fine, it just means empty() was lying to us
         root.update()
         root.update_idletasks()
+        
+    root.destroy()
+        
+
     
 def settupRoot():
     """Initializes tk, then returns once tk is ready"""

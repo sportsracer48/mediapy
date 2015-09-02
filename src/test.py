@@ -16,3 +16,4 @@ path7 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sound
 
 sound = makeSound(path)
 explore(sound)
+quit()
