@@ -91,17 +91,22 @@ import Tkinter
 #with slight modification by Henry Rachootin
 import synth.pysynth_b as pysynth
 import turtle as tur
+import Queue
 
 pyAudio = pyaudio.PyAudio() #should never change
 tk = Tkinter #alias
 noteList=['a', 'a#', 'b', 'c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#'] #should never change, used to interface with pysynth
 
 ver = "1.7"
-
-#TODO: there are TWO global, non-constant variables in this module.
-#root, colorWrapAround
-#these belong somewhere else
+dirPath = os.path.dirname(os.path.dirname(__file__))
+if dirPath == '':#this means command line, probably
+    dirPath = '..'
+    
 root = None
+tkRunning = False
+tkQueue = Queue.Queue()
+
+
 colorWrapAround = True
 
 true = 1
@@ -111,10 +116,9 @@ italic = "italic"
 bold = "bold"
 plain = "plain"
 
-dirPath = os.path.dirname(__file__)
-mono = os.path.join(dirPath,"..","monospace")
-serif = os.path.join(dirPath,"..","serif")
-sansSerif = os.path.join(dirPath,"..","sans-serif")
+mono = os.path.join(dirPath,"monospace")
+serif = os.path.join(dirPath,"serif")
+sansSerif = os.path.join(dirPath,"sans-serif")
 
 #Name nine types of public domain fonts I found on the internet
 fontTable = {mono:{italic:os.path.join(mono,"Hack-Oblique.ttf"),
@@ -127,7 +131,6 @@ fontTable = {mono:{italic:os.path.join(mono,"Hack-Oblique.ttf"),
                    bold:os.path.join(sansSerif,"Arimo-Bold.ttf"),
                    plain:os.path.join(sansSerif,"Arimo-Regular.ttf")}}
 
-
 defaultFont = ImageFont.truetype(fontTable[serif][plain], 24)
 
 mediaFolder = user.home + os.sep
@@ -138,6 +141,60 @@ mediaFolder = user.home + os.sep
 # print "Started by Mark Guzdial"
 # print "Updated by Nadeem Abdul Hamid, June 14 2007"
 # print "Updated by Henry Rachootin July 14 2015"
+
+
+def onQuit():
+    global tkRunning
+    tkRunning = False
+
+def _settupRoot_tk(condition):
+    """Initializes tk, then blocks forever. Don't call it from a thread you care about."""
+    global root,tkRunning,tkQueue
+    root = tk.Tk()
+    root.withdraw()
+    root.title("Root window, close to exit")
+    root.style = ttk.Style()
+    #feel free to select a better theme on your system than default
+    if sys.platform == 'win32':
+        root.style.theme_use("xpnative")
+    else:
+        root.style.theme_use("default")
+    
+    
+    #style things to make it look a bit more like JES
+    root.style.configure("TButton", padding = (0,3,0,3), font = ('Default',10))
+    root.style.configure("TLabel", font = ('Default',10))
+    try:
+        root.iconbitmap(default=os.path.join(dirPath,"images","jesicon.ico"))
+    except:
+        root.iconbitmap(default=os.path.join("images","jesicon.ico"))
+    def notifyCondition():
+        condition.acquire()
+        condition.notifyAll()
+        condition.release()
+    root.after(0,notifyCondition)
+    
+    root.protocol("WM_DELETE_WINDOW", onQuit)
+    
+    tkRunning = True
+    
+    while(tkRunning):
+        try:
+            while not tkQueue.empty(): #use up all the requests the dirty main thread
+                task = tkQueue.get(False)
+                task[0](*task[1],**task[2]) #execute them in the clean tk thread
+        except Queue.Empty:
+            pass #this is fine, it just means empty() was lying to us
+        root.update()
+        root.update_idletasks()
+    
+def settupRoot():
+    """Initializes tk, then returns once tk is ready"""
+    condition = threading.Condition()
+    threading.Thread(target = _settupRoot_tk,args = [condition]).start()
+    condition.acquire()
+    condition.wait()
+    condition.release()
 
 def tkGet(callback,*args,**kvargs):
     """
@@ -156,7 +213,9 @@ def tkGet(callback,*args,**kvargs):
         condition.release()
     
     condition.acquire()
-    root.after(0,helper)
+    if root is None:
+        settupRoot()
+    tkQueue.put((helper,[],{}),False)
     condition.wait()
     condition.release()
     
@@ -168,12 +227,9 @@ def tkDo(callback,*args,**kvargs):
     this being completed too soon. If <callback> calls tkGet or tkDo, this
     function will deadlock.
     """
-    root.after(0,callback,*args,**kvargs)
-    
-
-def setRoot(newRoot):
-    global root
-    root = newRoot
+    if root is None:
+        settupRoot()
+    tkQueue.put((callback,args,kvargs),False)
 
 def version():
     global ver
@@ -233,10 +289,10 @@ def showError(message):
 ##
 
 class RequestDialog(Dialog):
-    def __init__(self, parent, message, valHolder):
+    def __init__(self, message, valHolder):
         self.message = message
         self.valHolder = valHolder
-        Dialog.__init__(self, parent, title="")
+        Dialog.__init__(self, root, title="")
     
     def body(self, master):
 
@@ -251,13 +307,13 @@ class RequestDialog(Dialog):
         
 def requestString(message):
     valHolder = [None]
-    tkGet(RequestDialog,root,message,valHolder)
+    tkGet(RequestDialog,message,valHolder)
     return valHolder[0]
 
 def requestNumber(message):
     valHolder = [None]
     while True:
-        tkGet(RequestDialog,root,message,valHolder)
+        tkGet(RequestDialog,message,valHolder)
         try:
             return float(valHolder[0])
         except:
@@ -269,7 +325,7 @@ def requestNumber(message):
 def requestInteger(message):
     valHolder = [None]
     while True:
-        tkGet(RequestDialog,root,message,valHolder)
+        tkGet(RequestDialog,message,valHolder)
         try:
             return int(valHolder[0])
         except:
@@ -281,7 +337,7 @@ def requestInteger(message):
 def requestIntegerInRange(message,minVal,maxVal):
     valHolder = [None]
     while True:
-        tkGet(RequestDialog,root,message,valHolder)
+        tkGet(RequestDialog,message,valHolder)
         try:
             candidate = int(valHolder[0])
             if candidate>=minVal and candidate<=maxVal:
@@ -1008,7 +1064,7 @@ class Sound:
             
             internalSoundType = soundTypeDict[self.soundType]
             
-            self.soundFile = internalSoundType.open(filename,'r')
+            self.soundFile = internalSoundType.open(open(filename,'rb'))
             
             
             self.sampwidth = self.soundFile.getsampwidth()
@@ -1021,12 +1077,9 @@ class Sound:
             data = self.soundFile.readframes(self.soundFile.getnframes())
             
             
-            
             dtype = Sound.getNumpyType(self.soundFile.getsampwidth())
             
             self.a = numpy.fromstring(data, dtype = dtype)
-            
-            
             
             #aiff files are big endian, and pyaudio is little endian. 
             #To accommodate for this, we must reverse the bytes in each window
@@ -1639,7 +1692,7 @@ class SoundExplorer(ttk.Frame):
         fineSelectFrame.grid(row=4,column=0,pady=4)
         
         self.imagePaths = ["endLeft.gif","leftArrow.gif","rightArrow.gif","endRight.gif"]
-        self.imagePaths = map(lambda x: os.path.join("images",x),self.imagePaths)
+        self.imagePaths = map(lambda x: os.path.join(dirPath,"images",x),self.imagePaths)
         self.images = map(Im.open,self.imagePaths)
         self.tkImages = map(ImageTk.PhotoImage,self.images)
         
@@ -1885,7 +1938,7 @@ class PictureExplorer(ttk.Frame):
         fineMovementFrame.grid(row=0,column=0)
         
         self.imagePaths = ["leftArrow.gif","rightArrow.gif"]
-        self.imagePaths = map(lambda x: os.path.join("images",x),self.imagePaths)
+        self.imagePaths = map(lambda x: os.path.join(dirPath,"images",x),self.imagePaths)
         self.images = map(Im.open,self.imagePaths)
         self.tkImages = map(ImageTk.PhotoImage,self.images)
         
@@ -2051,6 +2104,7 @@ def makeWorld(width=None, height=None):
         height = 480
     def tkHelper():
         canvas = tur.ScrolledCanvas(tk.Toplevel(root),width=width, height=height,canvwidth=width, canvheight=height)
+        canvas.master.title("Turtle world")
         canvas.pack()
         screen = tur.TurtleScreen(canvas)
         screen.delay(0)
@@ -2130,7 +2184,6 @@ def drop(turtle,picture):
         image.paste(picture.getImage(),(0,0))
         angle = turtle.heading()-90
         angle = angle % 360
-        print angle
         xOffset = -picture.getHeight()*cos(radians(angle+90))
         yOffset = +picture.getHeight()*sin(radians(angle+90))
         image = image.rotate(angle,expand=True)
