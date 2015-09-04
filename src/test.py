@@ -14,6 +14,8 @@ path5 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sound
 path6 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sounds\\g722.aifc' #shouldn't work, aifc not supported
 path7 = 'C:\\Users\\Henry\\Documents\\LiClipse Workspace\\jes\\tests\\test-sounds\\acidisneeded.aif'
 
+print requestString("test")
+
 sound = makeSound(path)
 explore(sound)
 quit()
