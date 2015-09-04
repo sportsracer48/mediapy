@@ -1,8 +1,7 @@
 # mediapy
 A Cpython implementation of media.py
 
-
-To execute a file, edit jes.py to name the file you want (defaults to test.py), then execute from the root directory.
+To use the functions: from mymedia import *
 
 Requires PIL, numpy, and pyaudio to work.
 
