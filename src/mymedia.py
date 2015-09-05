@@ -98,6 +98,7 @@ tk = Tkinter #alias
 noteList=['a', 'a#', 'b', 'c', 'c#', 'd', 'd#', 'e', 'f', 'f#', 'g', 'g#'] #should never change, used to interface with pysynth
 
 ver = "1.7"
+
 dirPath = os.path.dirname(os.path.dirname(__file__))
 if dirPath == '':#this means command line, probably
     dirPath = '..'
@@ -149,10 +150,11 @@ def quitTk():
 def _settupRoot_tk(condition):
     """Initializes tk, then blocks forever. Don't call it from a thread you care about."""
     global root,tkRunning,tkQueue
+
     root = tk.Tk()
-    root.withdraw()
     root.title("Root window, close to exit")
     root.style = ttk.Style()
+    root.protocol("WM_DELETE_WINDOW",quitTk)
     #feel free to select a better theme on your system than default
     if sys.platform == 'win32':
         root.style.theme_use("xpnative")
@@ -171,19 +173,22 @@ def _settupRoot_tk(condition):
         condition.acquire()
         condition.notifyAll()
         condition.release()
-    root.after(0,notifyCondition)
+    tkQueue.put((notifyCondition,[],{}),False)
+    
     
     tkRunning = True
     
+
     while(tkRunning):
+        root.update()
+        root.update_idletasks()
         try:
             while not tkQueue.empty(): #use up all the requests the dirty main thread
                 task = tkQueue.get(False)
                 task[0](*task[1],**task[2]) #execute them in the clean tk thread
         except Queue.Empty:
+            print "in the except block"
             pass #this is fine, it just means empty() was lying to us
-        root.update()
-        root.update_idletasks()
         
     root.destroy()
         
@@ -192,8 +197,8 @@ def _settupRoot_tk(condition):
 def settupRoot():
     """Initializes tk, then returns once tk is ready"""
     condition = threading.Condition()
-    threading.Thread(target = _settupRoot_tk,args = [condition]).start()
     condition.acquire()
+    threading.Thread(target = _settupRoot_tk,args = [condition]).start()
     condition.wait()
     condition.release()
 
@@ -293,7 +298,7 @@ class RequestDialog(Dialog):
     def __init__(self, message, valHolder):
         self.message = message
         self.valHolder = valHolder
-        Dialog.__init__(self, root, title="")
+        Dialog.__init__(self, root, title=" ")
     
     def body(self, master):
 

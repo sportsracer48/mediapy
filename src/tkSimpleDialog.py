@@ -1,11 +1,12 @@
-import Tkinter as tk
 import ttk
+import Tkinter as tk
 
 class Dialog(tk.Toplevel):
 
     def __init__(self, parent, title = None):
 
         tk.Toplevel.__init__(self, parent)
+        self.transient(parent)
 
         if title:
             self.title(title)
