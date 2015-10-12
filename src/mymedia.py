@@ -86,7 +86,10 @@ import pyaudio
 import tkMessageBox
 #Fredrik Lundh's dialog box helper class
 from tkSimpleDialog import Dialog
-import Tkinter
+#mtTkinter is the best thing since canned bread. It allows tkInter to be run
+#from any thread, and allows you to call tkInter functions and methods from
+#anywhere. I would be lost without it.
+import mtTkinter as Tkinter
 #Martin C. Doege's audio synthesis library
 #with slight modification by Henry Rachootin
 import synth.pysynth_b as pysynth
@@ -104,10 +107,6 @@ if dirPath == '':#this means command line, probably
     dirPath = '..'
     
 root = None
-tkRunning = False
-tkQueue = Queue.Queue()
-
-
 colorWrapAround = True
 
 true = 1
@@ -144,17 +143,18 @@ mediaFolder = user.home + os.sep
 # print "Updated by Henry Rachootin July 14 2015"
 
 def quitTk():
-    global tkRunning
-    tkRunning = False
+    global root
+    root.destroy()
+    root = None
 
 def _settupRoot_tk(condition):
     """Initializes tk, then blocks forever. Don't call it from a thread you care about."""
-    global root,tkRunning,tkQueue
+    global root
 
     root = tk.Tk()
     root.title("Root window, close to exit")
     root.style = ttk.Style()
-    root.protocol("WM_DELETE_WINDOW",quitTk)
+    #root.protocol("WM_DELETE_WINDOW",quitTk)
     #feel free to select a better theme on your system than default
     if sys.platform == 'win32':
         root.style.theme_use("xpnative")
@@ -168,29 +168,18 @@ def _settupRoot_tk(condition):
     try:
         root.iconbitmap(default=os.path.join(dirPath,"images","jesicon.ico"))
     except:
-        root.iconbitmap(default=os.path.join("images","jesicon.ico"))
+        try:
+            root.iconbitmap(default=os.path.join("images","jesicon.ico"))
+        except:
+            print "cannot use icon"
     def notifyCondition():
         condition.acquire()
         condition.notifyAll()
         condition.release()
-    tkQueue.put((notifyCondition,[],{}),False)
-    
-    
-    tkRunning = True
-    
-
-    while(tkRunning):
-        root.update()
-        root.update_idletasks()
-        try:
-            while not tkQueue.empty(): #use up all the requests the dirty main thread
-                task = tkQueue.get(False)
-                task[0](*task[1],**task[2]) #execute them in the clean tk thread
-        except Queue.Empty:
-            print "in the except block"
-            pass #this is fine, it just means empty() was lying to us
         
-    root.destroy()
+    root.after(0,notifyCondition)
+    
+    root.mainloop()
         
 
     
@@ -203,39 +192,14 @@ def settupRoot():
     condition.release()
 
 def tkGet(callback,*args,**kvargs):
-    """
-    Executes <callback> in the tkinter thread, and waits for it to complete
-    before returning the return value of <callback>. If <callback> calls tkGet or tkDo, this
-    function will deadlock.
-    """
-    returnHolder = [None]
-    #condition will be used to alert this thread that tkinter is done executing the callback
-    condition = threading.Condition()
-    
-    def helper():
-        returnHolder[0]=callback(*args,**kvargs)
-        condition.acquire()
-        condition.notifyAll()
-        condition.release()
-    
-    condition.acquire()
     if root is None:
         settupRoot()
-    tkQueue.put((helper,[],{}),False)
-    condition.wait()
-    condition.release()
-    
-    return returnHolder[0]
+    return callback(*args,**kvargs);
 
 def tkDo(callback,*args,**kvargs):
-    """
-    Executes <callback> in the tkinter thread, eventually. Don't really count on
-    this being completed too soon. If <callback> calls tkGet or tkDo, this
-    function will deadlock.
-    """
     if root is None:
         settupRoot()
-    tkQueue.put((callback,args,kvargs),False)
+    callback(*args,**kvargs)
 
 def version():
     global ver
