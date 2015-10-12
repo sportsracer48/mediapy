@@ -33,7 +33,7 @@ class Dialog(tk.Toplevel):
 
         self.initial_focus.focus_set()
 
-        self.wait_window(self)
+        #self.wait_window(self)
 
     #
     # construction hooks

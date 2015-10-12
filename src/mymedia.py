@@ -106,6 +106,8 @@ dirPath = os.path.dirname(os.path.dirname(__file__))
 if dirPath == '':#this means command line, probably
     dirPath = '..'
     
+print dirPath
+    
 root = None
 colorWrapAround = True
 
@@ -154,7 +156,7 @@ def _settupRoot_tk(condition):
     root = tk.Tk()
     root.title("Root window, close to exit")
     root.style = ttk.Style()
-    #root.protocol("WM_DELETE_WINDOW",quitTk)
+    root.protocol("WM_DELETE_WINDOW",quitTk)
     #feel free to select a better theme on your system than default
     if sys.platform == 'win32':
         root.style.theme_use("xpnative")
@@ -177,7 +179,7 @@ def _settupRoot_tk(condition):
         condition.notifyAll()
         condition.release()
         
-    root.after(0,notifyCondition)
+    root.after(100,notifyCondition)
     
     root.mainloop()
         
@@ -259,9 +261,10 @@ def showError(message):
 ##
 
 class RequestDialog(Dialog):
-    def __init__(self, message, valHolder):
+    def __init__(self, message, valHolder, condition):
         self.message = message
         self.valHolder = valHolder
+        self.condition = condition
         Dialog.__init__(self, root, title=" ")
     
     def body(self, master):
@@ -274,16 +277,32 @@ class RequestDialog(Dialog):
 
     def apply(self):
         self.valHolder[0] = self.e1.get()
+        self.condition.acquire()
+        self.condition.notifyAll()
+        self.condition.release()
+    def cancel(self, event = None):
+        Dialog.cancel(self,event)
+        self.condition.acquire()
+        self.condition.notifyAll()
+        self.condition.release()
         
 def requestString(message):
     valHolder = [None]
-    tkGet(RequestDialog,message,valHolder)
+    condition = threading.Condition()
+    tkGet(RequestDialog,message,valHolder,condition)
+    condition.acquire()
+    condition.wait()
+    condition.release()
     return valHolder[0]
 
 def requestNumber(message):
     valHolder = [None]
     while True:
-        tkGet(RequestDialog,message,valHolder)
+        condition = threading.Condition()
+        tkGet(RequestDialog,message,valHolder,condition)
+        condition.acquire()
+        condition.wait()
+        condition.release()
         try:
             return float(valHolder[0])
         except:
@@ -295,7 +314,11 @@ def requestNumber(message):
 def requestInteger(message):
     valHolder = [None]
     while True:
-        tkGet(RequestDialog,message,valHolder)
+        condition = threading.Condition()
+        tkGet(RequestDialog,message,valHolder,condition)
+        condition.acquire()
+        condition.wait()
+        condition.release()
         try:
             return int(valHolder[0])
         except:
@@ -307,7 +330,11 @@ def requestInteger(message):
 def requestIntegerInRange(message,minVal,maxVal):
     valHolder = [None]
     while True:
-        tkGet(RequestDialog,message,valHolder)
+        condition = threading.Condition()
+        tkGet(RequestDialog,message,valHolder,condition)
+        condition.acquire()
+        condition.wait()
+        condition.release()
         try:
             candidate = int(valHolder[0])
             if candidate>=minVal and candidate<=maxVal:
