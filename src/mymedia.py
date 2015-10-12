@@ -94,7 +94,6 @@ import mtTkinter as Tkinter
 #with slight modification by Henry Rachootin
 import synth.pysynth_b as pysynth
 import turtle as tur
-import Queue
 
 pyAudio = pyaudio.PyAudio() #should never change
 tk = Tkinter #alias
@@ -168,10 +167,12 @@ def _settupRoot_tk(condition):
     root.style.configure("TButton", padding = (0,3,0,3), font = ('Default',10))
     root.style.configure("TLabel", font = ('Default',10))
     try:
-        root.iconbitmap(default=os.path.join(dirPath,"images","jesicon.ico"))
+        img = Tkinter.Image("photo", file=os.path.join(dirPath,"images","jesicon.gif"))
+        root.tk.call('wm', 'iconphoto', root._w, '-default', img)
     except:
         try:
-            root.iconbitmap(default=os.path.join("images","jesicon.ico"))
+            img = Tkinter.Image("photo", file=os.path.join("images","jesicon.gif"))
+            root.tk.call('wm', 'iconphoto', root._w, '-default', img)
         except:
             print "cannot use icon"
     def notifyCondition():
